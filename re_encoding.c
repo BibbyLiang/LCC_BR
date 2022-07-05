@@ -271,6 +271,22 @@ int chnl_rel_cal(float **input_seq,
         }
     }
 
+#if (1 == TEST_MODE)
+	for(j = 0; j < (CODEWORD_LEN + 1); j++)
+	{
+		chnl_rel_matrix[j][6] = 0;
+	}
+	chnl_rel_matrix[3][6] = 0.8;
+	chnl_rel_matrix[0][6] = 0.2;
+
+	for(j = 0; j < (CODEWORD_LEN + 1); j++)
+	{
+		chnl_rel_matrix[j][4] = 0;
+	}
+	chnl_rel_matrix[3][4] = 0.7;
+	chnl_rel_matrix[0][4] = 0.3;
+#endif
+
 	chnl_rel_seq_order();
 
 	return 0;
@@ -506,21 +522,23 @@ int rel_group()
 		unrel_group_seq[i] = chnl_rel_order_idx[(CODEWORD_LEN - MESSAGE_LEN) - 1 - i];
 	}
 
-#if 0//(1 == TEST_MODE)//just for GF(8) test
-	rel_group_seq[0] = 4;
-	rel_group_seq[1] = 2;
-	rel_group_seq[2] = 3;
-	rel_group_seq[3] = 5;
-	rel_group_seq[4] = 6;
-	unrel_group_seq[0] = 1;
-	unrel_group_seq[1] = 0;
-	chnl_rel_order_idx[0] = unrel_group_seq[1];
-	chnl_rel_order_idx[1] = unrel_group_seq[0];
-	chnl_rel_order_idx[2] = rel_group_seq[6];
-	chnl_rel_order_idx[3] = rel_group_seq[5];
-	chnl_rel_order_idx[4] = rel_group_seq[3];
-	chnl_rel_order_idx[5] = rel_group_seq[2];
-	chnl_rel_order_idx[6] = rel_group_seq[4];
+#if (1 == TEST_MODE)//just for GF(8) test
+	rel_group_seq[0] = 2;
+	rel_group_seq[1] = 1;
+	rel_group_seq[2] = 0;
+	//rel_group_seq[3] = 3;
+	//rel_group_seq[4] = 4;
+	unrel_group_seq[0] = 5;
+	unrel_group_seq[1] = 3;
+	unrel_group_seq[2] = 4;
+	unrel_group_seq[3] = 6;
+	chnl_rel_order_idx[0] = unrel_group_seq[3];
+	chnl_rel_order_idx[1] = unrel_group_seq[2];
+	chnl_rel_order_idx[2] = unrel_group_seq[1];
+	chnl_rel_order_idx[3] = unrel_group_seq[0];
+	chnl_rel_order_idx[4] = rel_group_seq[2];
+	chnl_rel_order_idx[5] = rel_group_seq[1];
+	chnl_rel_order_idx[6] = rel_group_seq[0];
 	//unrel_group_seq[2] = 4;
 	//unrel_group_seq[3] = 5;
 	//unrel_group_seq[4] = 6;
@@ -1024,12 +1042,16 @@ unsigned char coordinate_trans(unsigned char locator, unsigned char r, unsigned 
 	}
 #endif
 
+#if (0 == CFG_BR)
 	locator_product = poly_eva(v, MESSAGE_LEN + 1, locator);
+#else
+	locator_product = 0x0;
+#endif
 
 	//locator_product = 0;
 	coordinate = gf_div(gf_add(r_hd, r), locator_product);
 	//coordinate = gf_add(r_hd, r);
-#if 0	
+#if 1	
 	DEBUG_NOTICE("locator_product: %x | %x + %x = %x | %x | %x\n",
 				 locator,
 				 r_hd,
@@ -1821,6 +1843,20 @@ int re_encoding()
 					break;
 				}
 			}
+#if 1//there may be some errs
+			if(0 == find_flag)
+			{
+				for(k = 0; k < (CODEWORD_LEN - YITA); k++)
+				{
+					if((chnl_rel_order_idx[CODEWORD_LEN - 1 - k] == j)
+					   && (i != chnl_rel_max_id[j]))
+					{
+						find_flag = 1;
+						break;
+					}
+				}
+			}
+#endif
 
 			if(1 == find_flag)
 			{

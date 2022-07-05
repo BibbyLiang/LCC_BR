@@ -5,7 +5,7 @@
 
 #if (3 == GF_Q)
 #define GF_FIELD        8
-#define MESSAGE_LEN     5
+#define MESSAGE_LEN     3
 #endif
 #if (4 == GF_Q)
 #define GF_FIELD        16
@@ -74,14 +74,14 @@ extern unsigned char gf_add(unsigned char a, unsigned char b);
 extern unsigned char gf_multp(unsigned char a, unsigned char b);
 extern unsigned char gf_div(unsigned char a, unsigned char b);
 extern unsigned char gf_mod_single_term(unsigned char a, unsigned char b);
-extern unsigned char gf_degree(unsigned char* a, unsigned char len_a);
-extern unsigned char gf_div_q_r(unsigned char* dividend, unsigned char len_dividend,
-								   unsigned char* divisor, unsigned char len_divisor,
-								   unsigned char* quotien, unsigned char len_quotien,
-								   unsigned char* remainder, unsigned char len_remainder);
-extern unsigned char gf_multp_poly(unsigned char* a, unsigned char len_a,
-									   unsigned char* b, unsigned char len_b,
-									   unsigned char* product, unsigned char len_product);
+extern long long gf_degree(unsigned char* a, long long len_a);
+extern unsigned char gf_div_q_r(unsigned char* dividend, long long len_dividend,
+								   unsigned char* divisor, long long len_divisor,
+								   unsigned char* quotien, long long len_quotien,
+								   unsigned char* remainder, long long len_remainder);
+extern unsigned char gf_multp_poly(unsigned char* a, long long len_a,
+									   unsigned char* b, long long len_b,
+									   unsigned char* product, long long len_product);
 
 extern int gf_multp_poly_hw(unsigned char* a, unsigned char len_a,
 				 				  unsigned char* b, unsigned char len_b,

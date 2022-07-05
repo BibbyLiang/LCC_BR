@@ -11,6 +11,7 @@
 #include "rnd.h"
 #include "as_decoding.h"
 #include "re_encoding.h"
+#include "br.h"
 
 #define JUN_MA_EXAMPLE	0
 
@@ -89,6 +90,9 @@ unsigned char **uncommon_term_c_choose;//size: (2^yita) *(term_size)
 unsigned char **uncommon_decoded_codeword;//size: (2^yita) * codewordlen
 unsigned char **uncommon_decoded_message;
 unsigned char **tst_vct;//size: (2^yita) * codewordlen
+#if 1//(1 == CFG_BR)
+unsigned char *tst_vct_cmm;
+#endif
 unsigned char tst_vct_debug[CODEWORD_LEN];
 float *tst_vct_rel;
 
@@ -279,6 +283,83 @@ int intrplt_seq_init()
 	{
 		DEBUG_NOTICE("intrplt_seq: %ld %ld\n", i, intrplt_seq[i]);
 	}
+}
+
+int interpolation_init()
+{
+	long long i = 0, j = 0, k = 0, m = 0, n = 0;
+	long long a = 0, b = 0;
+	long long tmp_sum = 0;
+	unsigned char tmp_ff = 0xFF;
+	long long l_s = 0x7FFF, l_o = 0x7FFF;;
+	long long l_w = 0, tmp_real = 0;
+
+	long long d_x = 0, d_y = 0, c = 0, term_num = 0, term_num_real = 0;
+	long long d_x_max = 0, d_y_max = 0;
+
+	for(i = 0; i < (CODEWORD_LEN + 1); i++)
+	{
+		for(j = 0; j < CODEWORD_LEN; j++)
+		{
+			tmp_sum = tmp_sum + mul_matrix[i][j] * (mul_matrix[i][j] + 1);
+		}
+	}
+	c = tmp_sum / 2;
+
+	d_x = term_size_x + 1;
+	d_y = term_size_y + 1;
+
+	long long lex_order_table[d_x][d_y];
+
+	lex_order((long long **)lex_order_table, d_x, d_y, (MESSAGE_LEN - 1));
+	//lex_order((long long **)lex_order_table, d_x, d_y, Y_WEIGHT);
+
+	DEBUG_INFO("lex_order_table:\n");
+	for(i = 0; i < d_x; i++)
+	{
+		for(j = 0; j < d_y; j++)
+		{
+			DEBUG_INFO("%ld ", lex_order_table[i][j]);
+			if(c >= lex_order_table[i][j])
+			{
+				if(d_y_max < j)
+				{
+					d_y_max = j;
+				}
+			}
+		}
+		DEBUG_INFO("\n");
+	}
+	//test
+
+	if(0 == d_y_fix)
+	{
+		d_y_fix = d_y_max;
+	}
+	else
+	{
+		d_y_max = d_y_fix;
+	}
+
+	DEBUG_INFO("d_y_max: %ld %ld %ld %ld %ld %ld\n",
+			   c, d_x, d_y, d_y_max, term_size_x, term_size_y);
+
+#if (1 == RE_ENCODING)
+	lex_order((long long **)lex_order_table, d_x, d_y, Y_WEIGHT);
+#endif
+
+	d_x_max = d_x;
+#if (0 == TERM_SIZE_DBG)	
+	term_num_real = d_x * d_y;
+#else	
+	term_num_real = term_size_x * term_size_y;
+#endif	
+
+	/*use for un-common elements interpolation*/
+	d_y_num = d_y_max + 1;
+	term_size_p = term_num_real;
+
+	return 0;
 }
 
 int koetter_interpolation()
@@ -1505,6 +1586,7 @@ int uncommon_interpolation_init()
 		}
 	}
 
+#if (0 == CFG_BR)
 	/*init un-common elements interpolating Q*/
 	uncommon_term_c_p = (unsigned char***)malloc(sizeof(unsigned char**) * pow_val);
 	for (i = 0; i < pow_val; i++)
@@ -1603,7 +1685,8 @@ int uncommon_interpolation_init()
 		uncommon_l_w[i] = common_l_w;
 		uncommon_l_o[i] = common_l_o;
 	}
-	
+#endif
+
 	uncommon_term_c_choose = (unsigned char**)malloc(sizeof(unsigned char*) * pow_val);
 	for(i = 0; i < pow_val; i++)
 	{
@@ -1618,6 +1701,43 @@ int uncommon_interpolation_init()
   	long long unrel_place_idx = 0;
   	uncommon_decoded_codeword = (unsigned char**)malloc(sizeof(unsigned char*) * pow_val);
   	uncommon_decoded_message = (unsigned char**)malloc(sizeof(unsigned char*) * pow_val);
+  	
+#if (1 == CFG_BR)
+  	tst_vct_cmm = (unsigned char*)malloc(sizeof(unsigned char) * CODEWORD_LEN);
+  	for(j = 0; j < CODEWORD_LEN; j++)
+  	{
+  		unrel_place_flag = 0;
+		for(k = 0; k < YITA; k++)
+		{
+			if(j == uncommon_place[k])
+			{
+				unrel_place_flag = 1;
+				unrel_place_idx = k;
+				break;
+			}
+		}
+		
+		if(1 == unrel_place_flag)
+		{
+			//tst_vct_cmm[j] = power_polynomial_table[uncommon_seq[unrel_place_idx][i]][0];
+			tst_vct_cmm[j] = 0xFF;
+		}
+		else
+		{
+			tst_vct_cmm[j] = received_polynomial[j];
+		}
+
+		if(0xFF != tst_vct_cmm[j])
+		{
+  			DEBUG_NOTICE("tst_vct_cmm: %ld | %x %x | %x %x\n", j, tst_vct_cmm[j], encoded_polynomial[j], intrplt_seq[j], beta_matrix[tst_vct_cmm[j] + 1][intrplt_seq[j]]);
+		}
+		else
+		{
+			DEBUG_NOTICE("tst_vct_cmm: %ld | %x %x | %x %x\n", j, tst_vct_cmm[j], encoded_polynomial[j], intrplt_seq[j], beta_matrix[0][intrplt_seq[j]]);
+		}
+  	}
+#endif
+  	
   	tst_vct = (unsigned char**)malloc(sizeof(unsigned char*) * pow_val);
 	for(i = 0; i < pow_val; i++)
 	{
@@ -1625,6 +1745,7 @@ int uncommon_interpolation_init()
 		uncommon_decoded_message[i] = (unsigned char*)malloc(sizeof(unsigned char) * MESSAGE_LEN);
 		tst_vct[i] = (unsigned char*)malloc(sizeof(unsigned char) * CODEWORD_LEN);
   	}
+  	long long best_tv_idx = 0;
   	for(i = 0; i < pow_val; i++)
 	{
 		memset(uncommon_decoded_codeword[i], 0xFF, sizeof(unsigned char) * CODEWORD_LEN);
@@ -1651,7 +1772,7 @@ int uncommon_interpolation_init()
 			{
 				tst_vct[i][j] = received_polynomial[j];
 			}
-			DEBUG_NOTICE("tst_vct: %ld %ld | %x %x\n", i, j, tst_vct[i][j], encoded_polynomial[j]);
+			DEBUG_NOTICE("tst_vct: %ld %ld | %x %x | %x %x\n", i, j, tst_vct[i][j], encoded_polynomial[j], intrplt_seq[j], beta_matrix[tst_vct[i][j] + 1][intrplt_seq[j]]);
 			
 			if((0 == i)
 				&& (tst_vct[i][j] != received_polynomial[j]))
@@ -1685,10 +1806,11 @@ int uncommon_interpolation_init()
 		if(best_tst_vct_diff > tmp_cnt)
 		{
 			best_tst_vct_diff = tmp_cnt;
+			best_tv_idx = i;
 		}
 		tmp_cnt = 0;
   	}
-  	memcpy(tst_vct_debug, tst_vct[0], sizeof(unsigned char) * CODEWORD_LEN);
+  	memcpy(tst_vct_debug, tst_vct[best_tv_idx], sizeof(unsigned char) * CODEWORD_LEN);
 
 #if (1 == CFG_ADAPTIVE_PARALLEL)
 	tst_vct_seq = (long long**)malloc(sizeof(long long*) * pow_val);
@@ -3339,7 +3461,6 @@ int uncommon_fast_msg_get(long long l)
 #else				             
 			v_val = g_v_val[i];
 #endif
-
 			if((0xFF != q1_val)
 			   && (0xFF == v_val))
 			{
@@ -3349,10 +3470,9 @@ int uncommon_fast_msg_get(long long l)
 				{
 					tmp_test[i] = uncommon_decoded_codeword[l][i];
 				}
-#endif				
+#endif
 				continue;
 			}
-
 			q0_val = poly_eva(q0,
 				              CODEWORD_LEN,
 				              power_polynomial_table[i + 1][0]);		
@@ -3373,6 +3493,7 @@ int uncommon_fast_msg_get(long long l)
 				}
 			}
 #endif
+
 			if(0xFF != q1_val)
 			{
 				rec_dir_cw[i] = gf_div(gf_multp(q0_val, v_val),
@@ -3887,6 +4008,7 @@ int uncommon_interpolation_exit()
 	}
 	free(uncommon_seq);
 
+#if (0 == CFG_BR)
 	for(i = 0; i < d_y_num; i++)
 	{
 		free(common_term_c_p[i]);
@@ -3954,6 +4076,7 @@ int uncommon_interpolation_exit()
 	uncommon_l_o = NULL;
 	free(uncommon_l_w);
 	uncommon_l_w = NULL;
+#endif
 
 	for(i = 0; i < pow_val; i++)
 	{
@@ -3977,6 +4100,11 @@ int uncommon_interpolation_exit()
 	uncommon_decoded_message = NULL;
 	free(tst_vct);
 	tst_vct = NULL;
+
+#if (1 == CFG_BR)	
+	free(tst_vct_cmm);
+	tst_vct_cmm = NULL;
+#endif
 
 	DEBUG_INFO("%s\n", __func__);
 #if (1 == CFG_ADAPTIVE_PARALLEL)
@@ -6853,9 +6981,20 @@ int as_decoding()
 	uncommon_place_init();
 	intrplt_seq_init();
 
+#if (0 == CFG_BR)
 	koetter_interpolation();
+#endif
+
+#if (1 == CFG_BR)
+	interpolation_init();
+#endif
 
 	uncommon_interpolation_init();
+
+#if (1 == CFG_BR)
+	tst_vct_trans_init();
+	br_cmm_interpolation();
+#endif	
 
 #if (1 == CFG_ADAPTIVE_PARALLEL)
 	adaptive_parallel_init();
@@ -6968,6 +7107,7 @@ int as_decoding()
 
 			DEBUG_INFO("tst_vct_seq_int: %d %d %d\n", k, l, tst_vct_seq[k][l]);
 
+#if (0 == CFG_BR)
 			uncommon_interpolation(tst_vct_seq[k][l]);
 
 #if (CFG_RR_MODE == FAST_RR_M1)
@@ -6997,6 +7137,12 @@ int as_decoding()
 #endif
 			uncommon_rr_factorization_recur(tst_vct_seq[k][l]);
 			uncommon_recover_codeword(tst_vct_seq[k][l]);
+#endif
+
+#endif//CFG_BR
+
+#if (1 == CFG_BR)
+			br_uncmm_interpolation(tst_vct_seq[k][l]);
 #endif
 
 #if (1 == CFG_PARTIALLY_PARALLEL)
@@ -7093,6 +7239,10 @@ int as_decoding()
 #endif
 	}
 
+#if 0//(1 == CFG_BR)
+	br_test();
+#endif
+
 	check_lcc_result();
 
 #if (1 == CFG_PRG_DECODING)		
@@ -7124,6 +7274,10 @@ int as_decoding()
 				  	  ml_tst_vct_enc_diff);
 		}
 	}
+#endif
+	
+#if (1 == CFG_BR)
+	tst_vct_trans_exit();
 #endif
 
 	uncommon_interpolation_exit();

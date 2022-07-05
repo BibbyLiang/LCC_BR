@@ -474,13 +474,6 @@ unsigned char gf_location(unsigned char val)
 
 unsigned char gf_add(unsigned char a, unsigned char b)
 {
-#if (1 == GF_CAL_COUNT)
-	if(1 == cnt_switch)
-	{
-		add_cnt++;
-	}
-#endif
-
 	if(0xFF == a)
 	{
 		return b;
@@ -489,6 +482,13 @@ unsigned char gf_add(unsigned char a, unsigned char b)
 	{
 		return a;
 	}
+
+#if (1 == GF_CAL_COUNT)
+	if(1 == cnt_switch)
+	{
+		add_cnt++;
+	}
+#endif
 
 	unsigned char i = 0;
 	unsigned char sum_in_pow = 0;
@@ -507,13 +507,6 @@ unsigned char gf_add(unsigned char a, unsigned char b)
 
 unsigned char gf_multp(unsigned char a, unsigned char b)
 {
-#if (1 == GF_CAL_COUNT)
-	if(1 == cnt_switch)
-	{
-		mul_cnt++;
-	}
-#endif
-
 	if((0xFF == a) || (0xFF == b))
 	{
 		return 0xFF;
@@ -528,6 +521,13 @@ unsigned char gf_multp(unsigned char a, unsigned char b)
 	{
 		return a;
 	}
+
+#if (1 == GF_CAL_COUNT)
+	if(1 == cnt_switch)
+	{
+		mul_cnt++;
+	}
+#endif
 
 	unsigned char product_in_pow = (a + b) % (GF_FIELD - 1);
 
@@ -582,9 +582,9 @@ unsigned char gf_mod_single_term(unsigned char a, unsigned char b)
 	return remainder_in_pow;
 }
 
-unsigned char gf_degree(unsigned char* a, unsigned char len_a)
+long long gf_degree(unsigned char* a, long long len_a)
 {
-	unsigned char i = 0;
+	long long i = 0;
 
 	for(i = len_a - 1; i >= 0; i--)
 	{
@@ -593,17 +593,22 @@ unsigned char gf_degree(unsigned char* a, unsigned char len_a)
 			break;
 		}
 	}
+	if(0 > i)
+	{
+		i = 0;
+	}
 
 	return i;
 }
 
-unsigned char gf_div_q_r(unsigned char* dividend, unsigned char len_dividend,
-							unsigned char* divisor, unsigned char len_divisor,
-							unsigned char* quotien, unsigned char len_quotien,
-							unsigned char* remainder, unsigned char len_remainder)
+unsigned char gf_div_q_r(unsigned char* dividend, long long len_dividend,
+							unsigned char* divisor, long long len_divisor,
+							unsigned char* quotien, long long len_quotien,
+							unsigned char* remainder, long long len_remainder)
 {
-	unsigned char i = 0, j = 0, k = 0;
-	unsigned char locator = 0, factor = 0, locator_rmd = 0, factor_rmd = 0;
+	long long i = 0, j = 0, k = 0;
+	long long locator = 0, locator_rmd = 0;
+	unsigned char factor = 0, factor_rmd = 0;
 	unsigned char dividend_tmp[len_dividend], remainder_tmp[len_remainder];
 	memset(dividend_tmp, 0xFF, sizeof(unsigned char) * len_dividend);
 	memset(remainder_tmp, 0xFF, sizeof(unsigned char) * len_remainder);
@@ -614,7 +619,7 @@ unsigned char gf_div_q_r(unsigned char* dividend, unsigned char len_dividend,
 		{
 			remainder[i] = dividend[i];
 		}
-		//DEBUG_NOTICE("quotien is zero: %d %d\n", gf_degree(divisor, len_divisor), gf_degree(dividend, len_dividend));
+		DEBUG_NOTICE("quotien is zero: %d %d\n", gf_degree(divisor, len_divisor), gf_degree(dividend, len_dividend));
 
 		return 0;
 	}
@@ -626,15 +631,17 @@ unsigned char gf_div_q_r(unsigned char* dividend, unsigned char len_dividend,
 		factor = gf_div(dividend_tmp[gf_degree(dividend_tmp, len_dividend)], divisor[gf_degree(divisor, len_divisor)]);
 
 		quotien[locator] = factor;
-		//DEBUG_NOTICE("quotien: %x %d %x\n", quotien[locator], locator, factor);
+		DEBUG_NOTICE("quotien: %x %d %x\n", quotien[locator], locator, factor);
 
+		memcpy(remainder_tmp, dividend_tmp, sizeof(unsigned char) * len_remainder);
 		for(j = 0; j < len_divisor; j++)
 		{
 			factor_rmd = gf_multp(factor, divisor[gf_degree(divisor, len_divisor) - j]);
 			locator_rmd = locator + gf_degree(divisor, len_divisor) - j;
 			remainder_tmp[locator_rmd] = gf_add(dividend_tmp[locator_rmd], factor_rmd);
+			DEBUG_NOTICE("remainder_tmp: %x %d %x\n", factor_rmd, locator_rmd, remainder_tmp[locator_rmd]);
 		}
-#if 0
+#if 1
 		DEBUG_NOTICE("remainder_tmp:\n");
 		for(k = 0; k < len_remainder; k++)
 		{
@@ -642,6 +649,9 @@ unsigned char gf_div_q_r(unsigned char* dividend, unsigned char len_dividend,
 		}
 		DEBUG_NOTICE("\n");
 #endif
+		DEBUG_NOTICE("div_degree: %d %d\n",
+		             gf_degree(divisor, len_divisor),
+		             gf_degree(remainder_tmp, len_remainder));
 		if(gf_degree(divisor, len_divisor) > gf_degree(remainder_tmp, len_remainder))
 		{
 			for(k = 0; k < len_remainder; k++)
@@ -660,11 +670,12 @@ unsigned char gf_div_q_r(unsigned char* dividend, unsigned char len_dividend,
 	return 0;
 }
 
-unsigned char gf_multp_poly(unsigned char* a, unsigned char len_a,
-								unsigned char* b, unsigned char len_b,
-								unsigned char* product, unsigned char len_product)
+unsigned char gf_multp_poly(unsigned char* a, long long len_a,
+								unsigned char* b, long long len_b,
+								unsigned char* product, long long len_product)
 {
 	unsigned char i = 0, j = 0, idx = 0;
+	unsigned char tmp_val = 0xFF;
 
 	for(i = 0; i < len_a; i++)
 	{
@@ -676,7 +687,37 @@ unsigned char gf_multp_poly(unsigned char* a, unsigned char len_a,
 				//DEBUG_NOTICE("product len err: %d\n", idx);
 				continue;
 			}
-			product[idx] = gf_add(product[idx], gf_multp(a[i], b[j]));
+			if((0xFF == a[i])
+				|| (0xFF == b[i]))
+			{
+				tmp_val = 0xFF;
+			}
+			else if(0x0 == a[i])
+			{
+				tmp_val = b[j];
+			}
+			else if(0x0 == b[j])
+			{
+				tmp_val = a[j];
+			}
+			else
+			{
+				tmp_val = gf_multp(a[i], b[j]);
+			}
+			
+			if(0xFF == product[idx])
+			{
+				product[idx] = tmp_val;
+			}
+			else if(0xFF == tmp_val)
+			{
+				product[idx] = product[idx];
+			}
+			else
+			{
+				product[idx] = gf_add(product[idx], tmp_val);
+			}
+			//product[idx] = gf_add(product[idx], gf_multp(a[i], b[j]));
 		}
 	}
 }
@@ -685,7 +726,7 @@ int gf_multp_poly_hw(unsigned char* a, unsigned char len_a,
 				 		   unsigned char* b, unsigned char len_b,
 				 		   unsigned char* product, unsigned char len_product)
 {
-	unsigned int i = 0, j = 0, idx = len_product - 1;
+	unsigned char i = 0, j = 0, idx = len_product - 1;
 	unsigned char reg[len_a - 1];
 	memset(reg, 0xFF, sizeof(unsigned char) * (len_a - 1));
 	unsigned char pd_tmp = 0xFF;

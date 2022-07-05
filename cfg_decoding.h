@@ -1,12 +1,14 @@
 #ifndef CFG_DECODING_H
 #define CFG_DECODING_H
 
-#define GF_Q			 3
+#define GF_Q			 8
 #define GF_CAL_COUNT	 1
 
 #define SYS_ENC			 1
 
-#define TEST_MODE		 1
+#define TEST_MODE		 0
+
+#define CFG_BR			 1
 
 #define EARLY_TERMINATION		0
 #define EARLY_TERMINATION_NUM	100
@@ -51,9 +53,9 @@
 
 #define S_MUL					1
 #define LEX_TABLE_EXPAND_SIZE	4
-#define YITA					1
+#define YITA					8
 
-#define SHORTEN_LEN				0
+#define SHORTEN_LEN				7
 
 #if (1 == RE_ENCODING)
 #define Y_WEIGHT				(-1)

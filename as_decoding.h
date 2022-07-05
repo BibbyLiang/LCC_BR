@@ -55,6 +55,10 @@ extern long long *pgd_hist;
 extern long long *round_hist;
 
 extern long long best_tst_vct_diff;
+extern unsigned char intrplt_seq[CODEWORD_LEN];
+#if 1//(1 == CFG_BR)
+extern unsigned char *tst_vct_cmm;
+#endif
 extern unsigned char **tst_vct;
 extern unsigned char tst_vct_debug[CODEWORD_LEN];
 
@@ -64,6 +68,12 @@ extern long long intp_cnt;
 
 extern long long ml_tst_vct_recv_diff;
 extern long long ml_tst_vct_enc_diff;
+
+extern long long *g_term_x;
+extern long long *g_term_y;
+extern unsigned char **uncommon_term_c_choose;
+extern unsigned char **uncommon_decoded_codeword;
+extern long long term_size_p;
 
 extern int as_decoding();
 extern int g_term_malloc();
@@ -85,6 +95,9 @@ extern int uncommon_dfs_rr_recur(unsigned char *g_c_q,
 								  long long l);
 extern int uncommon_check_rr_decoded_result_recur(unsigned char *msg,
 														 long long l);								  
+#endif
+#if (CFG_RR_MODE == FAST_RR_M1)
+extern int uncommon_fast_msg_get(long long l);
 #endif
 #endif
 

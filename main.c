@@ -40,6 +40,10 @@ void init_simulation()
 	gf_partially_parallel_init();
 #endif
 
+#if (1 == CFG_BR)
+	br_cal_offline();
+#endif
+
 	return;
 }
 
@@ -69,7 +73,7 @@ void main()
 	float runtime;
 
 	/*input simulation parameters*/
-	float eb2n0_start = 6.5, eb2n0_stop = 6.5, eb2n0_step = 1, eb2n0 = 6.5;
+	float eb2n0_start = 8, eb2n0_stop = 8, eb2n0_step = 1, eb2n0 = 8;
 	long long iter_cnt = 1, monitor_cnt = 1;
 #if (0 == TEST_MODE)
 #if 1
@@ -168,11 +172,11 @@ void main()
 
 #if (1 == TEST_MODE)
 			/*generate messages for test mode*/
-			message_polynomial[0] = 0x5;
-			message_polynomial[1] = 0x4;
-			message_polynomial[2] = 0x4;
-			message_polynomial[3] = 0x2;
-			message_polynomial[4] = 0x3;
+			message_polynomial[0] = 0x2;
+			message_polynomial[1] = 0x0;
+			message_polynomial[2] = 0xFF;
+			//message_polynomial[3] = 0x3;
+			//message_polynomial[4] = 0x4;
 			//message_polynomial[5] = 0x4;
 			//message_polynomial[6] = 0x2;
 			//memset(message_polynomial, 0x0, sizeof(unsigned char) * MESSAGE_LEN);
@@ -229,13 +233,13 @@ void main()
 			//received_polynomial[4] = gf_add(encoded_polynomial[4], 0x2);
 			//received_polynomial[5] = gf_add(encoded_polynomial[5], 0x0);
 			//received_polynomial[9] = gf_add(encoded_polynomial[9], 0x2);
-			received_polynomial[0] = 0x5;
+			received_polynomial[0] = 0xFF;
 			received_polynomial[1] = 0x4;
-			received_polynomial[2] = 0x4;
-			received_polynomial[3] = 0x0;
-			received_polynomial[4] = 0x1;
-			received_polynomial[5] = 0x4;
-			received_polynomial[6] = 0x3;
+			received_polynomial[2] = 0x6;
+			received_polynomial[3] = 0x3;
+			received_polynomial[4] = 0x2;
+			received_polynomial[5] = 0x3;
+			received_polynomial[6] = 0x2;
 #endif
 #endif
 
@@ -346,15 +350,23 @@ void main()
 						  best_tst_vct_diff);
 				for(i = 0; i < CODEWORD_LEN; i++)
 				{
+#if 0				
 					if((encoded_polynomial[i] != received_polynomial[i])
 						|| (encoded_polynomial[i] != tst_vct_debug[i]))
 					{
-						DEBUG_SYS("Radius Check: %ld | %d %d %d\n",
+						DEBUG_SYS("Radius Check: %ld | %x %x %x\n",
 								  i,
 								  encoded_polynomial[i],
 								  received_polynomial[i],
 								  tst_vct_debug[i]);
 					}
+#endif					
+					DEBUG_SYS("Radius Check: %ld | %x %x %x %ld\n",
+								  i,
+								  encoded_polynomial[i],
+								  received_polynomial[i],
+								  tst_vct_debug[i],
+								  chnl_rel_order_idx[i]);
 				}
 #if (1 == OUTPUT_LOG)					
 				frc = fopen(log_name, "a+");
@@ -385,6 +397,18 @@ void main()
 				DEBUG_SYS("Radius Err. for Decoding 2: %d %d\n",
 						  frame_err_flag,
 						  best_tst_vct_diff);
+						  
+				for(i = 0; i < CODEWORD_LEN; i++)
+				{
+					DEBUG_SYS("Radius Check: %ld | %x %x %x | %ld %ld %ld\n",
+								  i,
+								  encoded_polynomial[i],
+								  received_polynomial[i],
+								  tst_vct_debug[i],
+								  chnl_rel_order_idx[i],
+								  chnl_rel_max_id[i],
+								  chnl_rel_scd_id[i]);
+				}		  
 #if (1 == DEBUG_LOG)
 				printf("Radius Err. for Decoding 2: %d %d\n",
 						frame_err_flag,
@@ -859,8 +883,6 @@ void main()
 	free(frc_debug);
 	frc_debug = NULL;
 #endif
-
-	br_test();
 
 	return;
 }
