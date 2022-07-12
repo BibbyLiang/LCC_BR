@@ -136,6 +136,9 @@ long long chnl_rel_thrd_cnt = 0;
 long long ml_tst_vct_recv_diff = 0;
 long long ml_tst_vct_enc_diff = 0;
 
+long long tv_round_clock_base = 0;
+long long tv_round_clock_base_prev = 0;
+
 int poly_mul(unsigned char *a,
 				unsigned char *b,
 				unsigned char *product,
@@ -7053,6 +7056,15 @@ int as_decoding()
 			last_round = l;
 			DEBUG_INFO("tst_vct_seq_check: %d %d %d\n", k, l, tst_vct_seq[k][l]);
 
+			if(0 == k)
+			{
+				tv_round_clock_base_prev = 1;
+				tv_round_clock_base = tst_vct_seq[k][l];
+			}
+			else
+			{
+				tv_round_clock_base_prev = 0;
+			}
 #if (1 == CFG_ADAPTIVE_PARALLEL)
 			decoded_tst_vct_seq[decoded_cnt] = tst_vct_seq[k][l];
 #else

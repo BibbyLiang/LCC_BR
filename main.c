@@ -172,9 +172,9 @@ void main()
 
 #if (1 == TEST_MODE)
 			/*generate messages for test mode*/
-			message_polynomial[0] = 0x2;
-			message_polynomial[1] = 0x0;
-			message_polynomial[2] = 0xFF;
+			message_polynomial[0] = 0x4;
+			message_polynomial[1] = 0x4;
+			message_polynomial[2] = 0x5;
 			//message_polynomial[3] = 0x3;
 			//message_polynomial[4] = 0x4;
 			//message_polynomial[5] = 0x4;
@@ -233,13 +233,13 @@ void main()
 			//received_polynomial[4] = gf_add(encoded_polynomial[4], 0x2);
 			//received_polynomial[5] = gf_add(encoded_polynomial[5], 0x0);
 			//received_polynomial[9] = gf_add(encoded_polynomial[9], 0x2);
-			received_polynomial[0] = 0xFF;
-			received_polynomial[1] = 0x4;
-			received_polynomial[2] = 0x6;
-			received_polynomial[3] = 0x3;
-			received_polynomial[4] = 0x2;
-			received_polynomial[5] = 0x3;
-			received_polynomial[6] = 0x2;
+			received_polynomial[0] = 0x3;
+			received_polynomial[1] = 0x0;
+			received_polynomial[2] = 0x5;
+			received_polynomial[3] = 0xFF;
+			received_polynomial[4] = 0x4;
+			received_polynomial[5] = 0x1;
+			received_polynomial[6] = 0x3;
 #endif
 #endif
 
@@ -281,7 +281,6 @@ void main()
 			gf_count_switch(1);
 			/*re-encoding transform*/
 			re_encoding();
-
 			/*GS decoding*/
 			as_decoding();
 			gf_count_switch(0);
@@ -680,7 +679,7 @@ void main()
 /*more than 10 errors are found, and 10% simulation times have been excuted*/
 #if (1 == EARLY_TERMINATION)
 			if((EARLY_TERMINATION_NUM <= (frame_err - hamm_err))
-				&& ((iter_cnt / 10) < iter))
+				&& ((iter_cnt / 100000) < iter))
 			{
 				/*simulation times are enough, go to next Eb/N0 point*/
 				break;

@@ -15,6 +15,8 @@
 
 #define B_MATRIX_SIZE	(S_MUL + 1)
 
+long long tv_idx_prev = -1;
+
 unsigned char g_cmm_poly[CODEWORD_LEN + 1];
 unsigned char g_poly[CODEWORD_LEN + 1];
 unsigned char r_poly[CODEWORD_LEN + 1];
@@ -157,9 +159,9 @@ int g_wave_poly_gen()
 	}
 	if(1 != find_flag)
 	{
-		g_poly[0] = power_polynomial_table[1][0];
+		g_poly[1] = power_polynomial_table[1][0];
 	}
-	g_poly[1] = 0;
+	g_poly[0] = 0;
 	unsigned char g_tmp_1[CODEWORD_LEN + 1], g_tmp_2[CODEWORD_LEN + 1];
 
 	for(i = 1; i < (CODEWORD_LEN + 0); i++)
@@ -192,7 +194,7 @@ int g_wave_poly_gen()
 			if(0xFF != g_poly[j])
 			{
 				g_tmp_2[j] = gf_multp(g_poly[j], power_polynomial_table[i + 1][0]);//calculation of a_i term
-				DEBUG_NOTICE("g_tmp_2: %d | %x=%x*%x\n", j, g_tmp_2[j], g_poly[j], rel_group_seq[i + 1]);
+				DEBUG_NOTICE("g_tmp_2: %d | %x=%x*%x\n", j, g_tmp_2[j], g_poly[j], power_polynomial_table[i + 1][0]);
 			}
 		}
 
@@ -292,10 +294,10 @@ int r_poly_gen(unsigned char *r_v, unsigned char t_p[][CODEWORD_LEN + 1], unsign
 		for(j = 0; j < (CODEWORD_LEN + 1); j++)
 		{
 			DEBUG_NOTICE("r_poly_cal: %d %d | %x + %x * %x\n", locator, j, r_p[j], r_v[locator], t_p[locator][j]);
-#if 0			
+#if 0
 			r_p[j] = gf_add(r_p[j],
 							gf_multp(r_v[locator], t_p[locator][j]));
-#endif			
+#else		
 			if((0xFF == r_v[locator])
 				|| (0xFF == t_p[locator][j]))
 			{
@@ -326,6 +328,7 @@ int r_poly_gen(unsigned char *r_v, unsigned char t_p[][CODEWORD_LEN + 1], unsign
 			{
 				r_p[j] = gf_add(r_p[j], tmp_val);
 			}
+#endif			
 			DEBUG_NOTICE("r_poly: %d %d | %x\n", locator, j, r_p[j]);
 		}
 	}
@@ -526,16 +529,56 @@ int ms_trans(long long row_size, long long col_size)
 		if(row_size != j)
 		{
 			lt_div_ind = ld[t2] - ld[t1];
+#if 0			
 			lt_div_coff = gf_div(b_matrix[t2][lp[t2]][ld[t2]],
 								 b_matrix[t1][lp[t1]][ld[t1]]);
+#else								 
+			if(0xFF == b_matrix[t2][lp[t2]][ld[t2]])
+			{
+				lt_div_coff = 0xFF;
+			}
+			else if(0x0 == b_matrix[t1][lp[t1]][ld[t1]])
+			{
+				lt_div_coff = b_matrix[t2][lp[t2]][ld[t2]];
+			}
+			else
+			{
+				lt_div_coff = gf_div(b_matrix[t2][lp[t2]][ld[t2]],
+								 b_matrix[t1][lp[t1]][ld[t1]]);
+			}
+#endif			
 			DEBUG_NOTICE("lt_div: %d %x\n", lt_div_ind, lt_div_coff);
 								 
 			for(j = 0; j < B_MATRIX_SIZE; j++)
 			{
 				for(k = 0; k < (CODEWORD_LEN + 2 - lt_div_ind); k++)
 				{
+#if 0				
 					tmp_row[j][k + lt_div_ind] = gf_multp(b_matrix[t1][j][k],
 														  lt_div_coff);
+#else					
+					if(0xFF == b_matrix[t1][j][k])
+					{
+						tmp_row[j][k + lt_div_ind] = 0xFF;
+					}
+					else if(0xFF == lt_div_coff)
+					{
+						tmp_row[j][k + lt_div_ind] = 0xFF;
+					}
+					else if(0x0 == b_matrix[t1][j][k])
+					{
+						tmp_row[j][k + lt_div_ind] = lt_div_coff;
+					}
+					else if(0x0 == lt_div_coff)
+					{
+						tmp_row[j][k + lt_div_ind] = b_matrix[t1][j][k];
+					}
+					else
+					{
+						tmp_row[j][k + lt_div_ind] = gf_multp(b_matrix[t1][j][k],
+														  	  lt_div_coff);
+					}
+#endif
 					DEBUG_NOTICE("tmp_row: %d %d | %x\n", j, k + lt_div_ind, tmp_row[j][k + lt_div_ind]);
 				}
 			}
@@ -544,8 +587,24 @@ int ms_trans(long long row_size, long long col_size)
 			{
 				for(k = 0; k < (CODEWORD_LEN + 2); k++)
 				{
+#if 0 				
 					b_matrix[t2][j][k] = gf_add(b_matrix[t2][j][k],
 					                            tmp_row[j][k]);
+#else
+					if(0xFF == b_matrix[t2][j][k])
+					{
+						b_matrix[t2][j][k] = tmp_row[j][k];
+					}
+					else if(0xFF == tmp_row[j][k])
+					{
+						b_matrix[t2][j][k] = b_matrix[t2][j][k];
+					}
+					else
+					{
+						b_matrix[t2][j][k] = gf_add(b_matrix[t2][j][k],
+					                                tmp_row[j][k]);
+					}
+#endif
 				}
 			}
 		}
@@ -725,6 +784,8 @@ int tst_vct_trans_exit()
 	return 0;
 }
 
+unsigned char tmp_1[CODEWORD_LEN + 1], tmp_2[CODEWORD_LEN + 1];
+
 int t_wave_poly_construct(unsigned char locator_j, unsigned char *L)
 {
 	DEBUG_NOTICE("%s: %x\n", __func__, locator_j);
@@ -796,7 +857,11 @@ int t_wave_poly_construct(unsigned char locator_j, unsigned char *L)
 		}
 	}
 
+#if 1
 	tmp_div = t_div[locator_j];
+#else	
+	tmp_div= 0x0;
+#endif	
 
 	for(i = 0; i < (CODEWORD_LEN + 1); i++)
 	{
@@ -815,6 +880,160 @@ int t_wave_poly_construct(unsigned char locator_j, unsigned char *L)
 		L[i] = gf_multp(L[i], tmp_div);
 		DEBUG_NOTICE("t_wave_poly: %d %d | %x\n", locator_j, i, L[i]);
 	}
+
+#if 0	
+	memcpy(tmp_1, L, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+#endif
+	
+	return 0;
+}
+
+unsigned char t_wave_cmm[CODEWORD_LEN + 1];
+int t_wave_cmm_cal()
+{
+	long long i = 0, j = 0;
+	unsigned char v_tmp_1[CODEWORD_LEN + 1], v_tmp_2[CODEWORD_LEN + 1];
+	unsigned char tmp_div = 0, tmp_inv = 0xFF;
+	unsigned char rel_flag = 0;
+	
+	memset(t_wave_cmm, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+	t_wave_cmm[0] = 0;
+	
+	for(i = 1; i < GF_FIELD; i++)
+	{
+		rel_flag = 0;
+		for(j = 0; j < MESSAGE_LEN; j++)
+		{
+			if(power_polynomial_table[i][0] == rel_group_seq[j])
+			{
+				rel_flag = 1;
+				break;
+			}
+		}
+		if(1 == rel_flag)
+		{
+			continue;
+		}
+		
+		memset(v_tmp_1, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+		memset(v_tmp_2, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+
+		for(j = 0; j < CODEWORD_LEN; j++)
+		{
+			v_tmp_1[j + 1] = t_wave_cmm[j];//increase degree because of x term
+			//DEBUG_NOTICE("v_tmp_1: %d | %x\n", j + 1, v_tmp_1[j + 1]);
+			if(0xFF == t_wave_cmm[j])
+			{
+				v_tmp_2[j] = 0xFF;
+				continue;
+			}
+			if(0x0 == t_wave_cmm[j])
+			{
+				v_tmp_2[j] = power_polynomial_table[i][0];
+				//DEBUG_NOTICE("v_tmp_2: %d | %x=%x*%x\n", j, v_tmp_2[j], L[j], power_polynomial_table[i][0]);
+				continue;
+			}
+			if(0xFF != t_wave_cmm[j])
+			{
+				v_tmp_2[j] = gf_multp(t_wave_cmm[j], power_polynomial_table[i][0]);//calculation of a_i term
+			}
+			//DEBUG_NOTICE("v_tmp_2: %d | %x=%x*%x\n", j, v_tmp_2[j], L[j], power_polynomial_table[i][0]);
+		}
+
+		for(j = 0; j < (CODEWORD_LEN + 1); j++)
+		{
+			if(0xFF == v_tmp_1[j])
+			{
+				t_wave_cmm[j]= v_tmp_2[j];
+				//DEBUG_NOTICE("v_tmp: %d %d | %x\n", i, j, L[j]);
+				continue;
+			}
+			if(0xFF == v_tmp_2[j])
+			{
+				t_wave_cmm[j]= v_tmp_1[j];
+				//DEBUG_NOTICE("v_tmp: %d %d | %x\n", i, j, L[j]);
+				continue;
+			}
+			t_wave_cmm[j] = gf_add(v_tmp_1[j], v_tmp_2[j]);//add 2 parts
+			//DEBUG_NOTICE("v_tmp: %d %d | %x\n", i, j, L[j]);
+		}
+	}
+	
+	return 0;
+}
+
+int t_wave_poly_construct_new(unsigned char locator_j, unsigned char *L)
+{
+	DEBUG_NOTICE("%s: %x\n", __func__, locator_j);
+	long long i = 0, j = 0;
+	unsigned char v_tmp_1[CODEWORD_LEN + 1], v_tmp_2[CODEWORD_LEN + 1];
+	unsigned char tmp_div = 0, tmp_inv = 0xFF;
+	unsigned char rel_flag = 0;
+	unsigned char quotien[CODEWORD_LEN + 1];
+	unsigned char remainder[CODEWORD_LEN + 1];
+	unsigned char tmp_poly[CODEWORD_LEN + 1];
+
+	memset(L, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+
+#if 1
+	long long degree_l = gf_degree(t_wave_cmm, CODEWORD_LEN + 1);
+	memset(tmp_poly, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+	tmp_poly[1] = 0x0;
+	tmp_poly[0] = locator_j;
+	//tmp_poly[0] = 0x0;
+	memset(quotien, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+	memset(remainder, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+	DEBUG_INFO("gf_div_q_r: %ld\n", locator_j);
+	gf_div_q_r(t_wave_cmm, degree_l + 1,
+			   tmp_poly, 2,
+			   quotien, CODEWORD_LEN + 1,
+			   remainder, CODEWORD_LEN + 1);
+	memcpy(L, quotien, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+	for(i = 0; i < (CODEWORD_LEN + 1); i++)
+	{
+		DEBUG_INFO("L_poly: %ld | %x\n", i, L[i]);
+	}	
+#endif
+#if 1
+	tmp_div = t_div[locator_j];
+#else	
+	tmp_div= 0x0;
+#endif	
+
+	for(i = 0; i < (CODEWORD_LEN + 1); i++)
+	{
+		if(0xFF == L[i])
+		{
+			L[i] = 0xFF;
+			DEBUG_NOTICE("t_wave_poly: %d %d | %x\n", locator_j, i, L[i]);
+			continue;
+		}
+		if(0x0 == L[i])
+		{
+			L[i] = tmp_div;
+			DEBUG_NOTICE("t_wave_poly: %d %d | %x\n", locator_j, i, L[i]);
+			continue;
+		}
+		if(0x0 == tmp_div)
+		{
+			DEBUG_NOTICE("t_wave_poly: %d %d | %x\n", locator_j, i, L[i]);
+			continue;
+		}
+	
+		L[i] = gf_multp(L[i], tmp_div);
+		DEBUG_NOTICE("t_wave_poly: %d %d | %x\n", locator_j, i, L[i]);
+	}
+#if 0
+	memcpy(tmp_2, L, sizeof(unsigned char) * (CODEWORD_LEN + 1));
+	
+	for(i = 0; i < (CODEWORD_LEN + 1); i++)
+	{
+		if(tmp_1[i] != tmp_2[i])
+		{
+			DEBUG_SYS("tmp_test: %d | %x %x\n", i, tmp_1[i], tmp_2[i]);
+		}
+	}
+#endif	
 	
 	return 0;
 }
@@ -824,6 +1043,10 @@ int lagrange_wave_poly_construct()
 	DEBUG_NOTICE("%s\n", __func__);
 	long long i = 0, j = 0;
 	unsigned char rel_flag = 0;
+
+#if (1 == CFG_T_WAVR_OPT)
+	t_wave_cmm_cal();
+#endif
 
 	for(i = 1; i < GF_FIELD; i++)
 	{
@@ -841,7 +1064,11 @@ int lagrange_wave_poly_construct()
 			memset(t_wave_poly[i - 1], 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
 			continue;
 		}
+#if (0 == CFG_T_WAVR_OPT)
 		t_wave_poly_construct(power_polynomial_table[i][0], t_wave_poly[i - 1]);
+#else
+		t_wave_poly_construct_new(power_polynomial_table[i][0], t_wave_poly[i - 1]);
+#endif
 	}
 
 	return 0;
@@ -855,7 +1082,9 @@ int g_r_poly_div_v()
 	unsigned char v_t_tmp[MESSAGE_LEN + 1];
 	unsigned char v_t_div[2];
 	unsigned char tmp_flag = 0;
-#if 0
+	unsigned char tmp_val = 0xFF;
+	
+#if (0 == BR_SIMPLE_G)
 	memset(quotien, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
 	memset(remainder, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
 	gf_div_q_r(g_poly, CODEWORD_LEN + 1,
@@ -908,8 +1137,44 @@ int g_r_poly_div_v()
 		
 		for(j = 0; j < (CODEWORD_LEN + 1); j++)
 		{
+#if 0		
 			DEBUG_INFO("r_poly_quotien: %ld %ld | %x | %x %x\n", i, j, quotien[j], tst_vct_cmm_trans[i], t_wave_poly[i][j]);
 			quotien[j] = gf_add(quotien[j], gf_multp(tst_vct_cmm_trans[i], t_wave_poly[i][j]));
+#else			
+			if(0xFF == tst_vct_cmm_trans[i])
+			{
+				tmp_val = 0xFF;
+			}
+			else if(0xFF == t_wave_poly[i][j])
+			{
+				tmp_val = 0xFF;
+			}
+			else if(0x0 == tst_vct_cmm_trans[i])
+			{
+				tmp_val = t_wave_poly[i][j];
+			}
+			else if(0x0 == t_wave_poly[i][j])
+			{
+				tmp_val = tst_vct_cmm_trans[i];
+			}
+			else
+			{
+				tmp_val = gf_multp(tst_vct_cmm_trans[i], t_wave_poly[i][j]);
+			}
+			
+			if(0xFF == tmp_val)
+			{
+				quotien[j] = quotien[j];
+			}
+			else if(0xFF == quotien[j])
+			{
+				quotien[j] = tmp_val;
+			}
+			else
+			{
+				quotien[j] = gf_add(quotien[j], tmp_val);
+			}
+#endif			
 		}
 	}
 	memcpy(r_poly, quotien, sizeof(unsigned char) * (CODEWORD_LEN + 1));
@@ -991,6 +1256,7 @@ int a_matrix_tv_gen(long long tv_idx)
 			{
 				degree_gamma_poly = j;
 			}
+			DEBUG_INFO("poly_co: %d %d | %x | %x\n", i, j, poly_cmm_coef[j], gamma_poly[tv_idx][j]);
 		}
 		degree_poly_prod = degree_poly_cmm_coef + degree_gamma_poly;
 		DEBUG_INFO("degree_poly: %ld %ld %ld\n", degree_poly_cmm_coef, degree_gamma_poly, degree_poly_prod);
@@ -1174,16 +1440,67 @@ int br_poly_trans(long long tv_idx)
 	return 0;
 }
 
+int base_cmm_poly_matrix_trans()
+{
+	long long i = 0, j = 0;
+	
+	for(i = 0; i < B_MATRIX_SIZE; i++)
+	{
+		for(j = 0; j < B_MATRIX_SIZE; j++)
+		{
+			memcpy(a_cmm_matrix[i][j], a_matrix[i][j], sizeof(unsigned char) * (CODEWORD_LEN + 1));
+		}
+	}
+	
+	return 0;
+}
+
+int gamma_diff_poly_gen(long long tv_idx)
+{
+	long long i = 0;
+	unsigned char diff_vct[CODEWORD_LEN];
+	memset(diff_vct, 0xFF, sizeof(unsigned char) * CODEWORD_LEN);
+	for(i = 0; i < CODEWORD_LEN; i++)
+	{
+		if(0 == tv_idx)
+		{
+			diff_vct[i] = tst_vct_trans[tv_idx][i];
+		}
+		else
+		{
+			diff_vct[i] = gf_add(tst_vct_trans[tv_idx][i], tst_vct_trans[tv_idx_prev][i]);
+		}
+		DEBUG_INFO("diff_vct: %ld | %x\n", i, diff_vct[i]);
+	}
+
+	r_poly_gen(diff_vct, t_wave_poly, gamma_poly[tv_idx], YITA);
+
+	for(i = 0; i < (CODEWORD_LEN + 1); i++)
+	{
+		if(0xFF != gamma_poly[tv_idx][i])
+		{
+			DEBUG_INFO("gamma_poly: %ld %ld | %x\n", tv_idx, i, gamma_poly[tv_idx][i]);
+		}
+	}
+
+	//tv_idx_prev = tv_idx;
+	//tv_idx_prev = 0;
+	tv_idx_prev = tv_round_clock_base;
+
+	return 0;
+}
+
 int br_cmm_interpolation()
 {
 	memcpy(g_poly, g_cmm_poly, sizeof(unsigned char) * (CODEWORD_LEN + 1));
-
+#if 0	
 	r_poly_gen(tst_vct_cmm_trans, t_poly, r_poly, CODEWORD_LEN);
+#endif
 
 	lagrange_wave_poly_construct();
-	//gf_count_switch(1);
+
 	g_r_poly_div_v();//simple implementation may be used instead of this
-	//gf_count_switch(0);
+
 	a_matrix_gen();
 #if 0
 	while(0 == is_weak_popov_form(B_MATRIX_SIZE, B_MATRIX_SIZE))
@@ -1203,8 +1520,22 @@ int br_uncmm_interpolation(long long tv_idx)
 	DEBUG_IMPOTANT("%s: %ld\n", __func__, tv_idx);
 	long long time_cnt = 0;
 
+#if (0 == CFG_BR_PROG)
 	gamma_poly_gen(tv_idx);
+#else
+	gamma_diff_poly_gen(tv_idx);
+#endif
+
 	a_matrix_tv_gen(tv_idx);
+
+#if 1//(1 == CFG_BR_PROG)	
+	//if(0 == tv_idx)
+	if(1 == tv_round_clock_base_prev)
+	{
+		base_cmm_poly_matrix_trans();
+	}
+#endif
+
 	while(0 == is_weak_popov_form(B_MATRIX_SIZE, B_MATRIX_SIZE))
 	{
 		ms_trans(B_MATRIX_SIZE, B_MATRIX_SIZE);
@@ -1216,16 +1547,21 @@ int br_uncmm_interpolation(long long tv_idx)
 			break;
 		}
 	}
+
 	b_matrix_gen_rev();
 	
 	br_poly_trans(tv_idx);
 
 	uncommon_fast_msg_get(tv_idx);
+
+#if 0//(1 == CFG_BR_PROG)	
+	base_cmm_poly_matrix_trans();
+#endif
 }
 
 int br_cal_offline()
 {
-#if 0
+#if (0 == BR_SIMPLE_G)
 	g_poly_gen();
 #endif	
 	lagrange_poly_construct();

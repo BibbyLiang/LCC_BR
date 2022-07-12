@@ -474,6 +474,15 @@ unsigned char gf_location(unsigned char val)
 
 unsigned char gf_add(unsigned char a, unsigned char b)
 {
+#if (1 == GF_CAL_COUNT)
+#if (0 == GF_CAL_EXM)
+	if(1 == cnt_switch)
+	{
+		add_cnt++;
+	}
+#endif	
+#endif
+
 	if(0xFF == a)
 	{
 		return b;
@@ -484,10 +493,12 @@ unsigned char gf_add(unsigned char a, unsigned char b)
 	}
 
 #if (1 == GF_CAL_COUNT)
-	if(1 == cnt_switch)
-	{
-		add_cnt++;
-	}
+#if (1 == GF_CAL_EXM)
+		if(1 == cnt_switch)
+		{
+			add_cnt++;
+		}
+#endif	
 #endif
 
 	unsigned char i = 0;
@@ -507,6 +518,15 @@ unsigned char gf_add(unsigned char a, unsigned char b)
 
 unsigned char gf_multp(unsigned char a, unsigned char b)
 {
+#if (1 == GF_CAL_COUNT)
+#if (0 == GF_CAL_EXM)
+	if(1 == cnt_switch)
+	{
+		mul_cnt++;
+	}
+#endif	
+#endif
+
 	if((0xFF == a) || (0xFF == b))
 	{
 		return 0xFF;
@@ -523,10 +543,12 @@ unsigned char gf_multp(unsigned char a, unsigned char b)
 	}
 
 #if (1 == GF_CAL_COUNT)
-	if(1 == cnt_switch)
-	{
-		mul_cnt++;
-	}
+#if (1 == GF_CAL_EXM)
+		if(1 == cnt_switch)
+		{
+			mul_cnt++;
+		}
+#endif	
 #endif
 
 	unsigned char product_in_pow = (a + b) % (GF_FIELD - 1);
@@ -631,12 +653,31 @@ unsigned char gf_div_q_r(unsigned char* dividend, long long len_dividend,
 		factor = gf_div(dividend_tmp[gf_degree(dividend_tmp, len_dividend)], divisor[gf_degree(divisor, len_divisor)]);
 
 		quotien[locator] = factor;
-		DEBUG_NOTICE("quotien: %x %d %x\n", quotien[locator], locator, factor);
+		DEBUG_INFO("quotien: %d %x %d %x\n", i, quotien[locator], locator, factor);
 
 		memcpy(remainder_tmp, dividend_tmp, sizeof(unsigned char) * len_remainder);
 		for(j = 0; j < len_divisor; j++)
 		{
-			factor_rmd = gf_multp(factor, divisor[gf_degree(divisor, len_divisor) - j]);
+			if(0xFF == factor)
+			{
+				factor_rmd = 0xFF;
+			}
+			else if(0x0 == factor)
+			{
+				factor_rmd = divisor[gf_degree(divisor, len_divisor) - j];
+			}
+			else if(0xFF == divisor[gf_degree(divisor, len_divisor) - j])
+			{
+				factor_rmd = 0xFF;
+			}
+			else if(0x0 == divisor[gf_degree(divisor, len_divisor) - j])
+			{
+				factor_rmd = factor;
+			}
+			else
+			{
+				factor_rmd = gf_multp(factor, divisor[gf_degree(divisor, len_divisor) - j]);
+			}
 			locator_rmd = locator + gf_degree(divisor, len_divisor) - j;
 			remainder_tmp[locator_rmd] = gf_add(dividend_tmp[locator_rmd], factor_rmd);
 			DEBUG_NOTICE("remainder_tmp: %x %d %x\n", factor_rmd, locator_rmd, remainder_tmp[locator_rmd]);
@@ -688,7 +729,7 @@ unsigned char gf_multp_poly(unsigned char* a, long long len_a,
 				continue;
 			}
 			if((0xFF == a[i])
-				|| (0xFF == b[i]))
+				|| (0xFF == b[j]))
 			{
 				tmp_val = 0xFF;
 			}
@@ -717,7 +758,7 @@ unsigned char gf_multp_poly(unsigned char* a, long long len_a,
 			{
 				product[idx] = gf_add(product[idx], tmp_val);
 			}
-			//product[idx] = gf_add(product[idx], gf_multp(a[i], b[j]));
+			//DEBUG_NOTICE("product: %d %d %d | %x\n", i, j, idx, product[idx]);
 		}
 	}
 }

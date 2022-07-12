@@ -3,16 +3,20 @@
 
 #define GF_Q			 8
 #define GF_CAL_COUNT	 1
+#define GF_CAL_EXM		 0
 
 #define SYS_ENC			 1
 
 #define TEST_MODE		 0
 
 #define CFG_BR			 1
+#define BR_SIMPLE_G		 1
+#define CFG_BR_PROG		 1
+#define CFG_T_WAVR_OPT	 1
 
-#define EARLY_TERMINATION		0
+#define EARLY_TERMINATION		1
 #define EARLY_TERMINATION_NUM	100
-#define OUTPUT_LOG				0
+#define OUTPUT_LOG				1
 #define DEBUG_LOG				0
 
 #define RELEX_ORDER				1
@@ -43,8 +47,8 @@
 #define CFG_PRG_DECODING		1
 #define CFG_IMD_STORE			1
 
-#define CFG_ADAPTIVE_PARALLEL	0
-#define CFG_ADAPTIVE_SIZE		64
+#define CFG_ADAPTIVE_PARALLEL	1
+#define CFG_ADAPTIVE_SIZE		32
 #define CFG_CHNL_REL_THRD		50
 
 #define CFG_RE_ARRANGE_TST_VCT	1//not finish now, need to be checked and move to adaptive mode

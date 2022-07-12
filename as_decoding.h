@@ -75,6 +75,9 @@ extern unsigned char **uncommon_term_c_choose;
 extern unsigned char **uncommon_decoded_codeword;
 extern long long term_size_p;
 
+extern long long tv_round_clock_base;
+extern long long tv_round_clock_base_prev;
+
 extern int as_decoding();
 extern int g_term_malloc();
 extern int g_term_destroy();

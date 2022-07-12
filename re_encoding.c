@@ -272,19 +272,28 @@ int chnl_rel_cal(float **input_seq,
     }
 
 #if (1 == TEST_MODE)
-	for(j = 0; j < (CODEWORD_LEN + 1); j++)
-	{
-		chnl_rel_matrix[j][6] = 0;
-	}
-	chnl_rel_matrix[3][6] = 0.8;
-	chnl_rel_matrix[0][6] = 0.2;
+	for (i = 0; i < CODEWORD_LEN; i++)
+    {
+        for (j = 0; j < (CODEWORD_LEN + 1); j++)
+        {
+            chnl_rel_matrix[j][i] = 0;
+        }
+    }
+    chnl_rel_matrix[4][0] = 1;
+    chnl_rel_matrix[6][2] = 1;
+    chnl_rel_matrix[0][3] = 1;
 
-	for(j = 0; j < (CODEWORD_LEN + 1); j++)
-	{
-		chnl_rel_matrix[j][4] = 0;
-	}
-	chnl_rel_matrix[3][4] = 0.7;
-	chnl_rel_matrix[0][4] = 0.3;
+	chnl_rel_matrix[5][4] = 0.9;
+	chnl_rel_matrix[6][4] = 0.1;
+
+	chnl_rel_matrix[2][5] = 0.8;
+	chnl_rel_matrix[5][5] = 0.2;
+
+	chnl_rel_matrix[4][6] = 0.7;
+	chnl_rel_matrix[6][6] = 0.3;
+
+	chnl_rel_matrix[1][1] = 0.6;
+	chnl_rel_matrix[4][1] = 0.4;
 #endif
 
 	chnl_rel_seq_order();
@@ -522,15 +531,15 @@ int rel_group()
 		unrel_group_seq[i] = chnl_rel_order_idx[(CODEWORD_LEN - MESSAGE_LEN) - 1 - i];
 	}
 
-#if (1 == TEST_MODE)//just for GF(8) test
-	rel_group_seq[0] = 2;
-	rel_group_seq[1] = 1;
+#if 0//(1 == TEST_MODE)//just for GF(8) test
+	rel_group_seq[0] = 1;
+	rel_group_seq[1] = 4;
 	rel_group_seq[2] = 0;
 	//rel_group_seq[3] = 3;
 	//rel_group_seq[4] = 4;
-	unrel_group_seq[0] = 5;
-	unrel_group_seq[1] = 3;
-	unrel_group_seq[2] = 4;
+	unrel_group_seq[0] = 3;
+	unrel_group_seq[1] = 5;
+	unrel_group_seq[2] = 2;
 	unrel_group_seq[3] = 6;
 	chnl_rel_order_idx[0] = unrel_group_seq[3];
 	chnl_rel_order_idx[1] = unrel_group_seq[2];
