@@ -19,6 +19,7 @@ float chnl_rel_order[CODEWORD_LEN];
 long long chnl_rel_order_idx[CODEWORD_LEN];
 long long chnl_rel_max_id[CODEWORD_LEN];
 long long chnl_rel_scd_id[CODEWORD_LEN];
+long long chnl_rel_thr_id[CODEWORD_LEN];
 
 unsigned char mul_matrix[CODEWORD_LEN + 1][CODEWORD_LEN];
 unsigned char beta_matrix[CODEWORD_LEN + 1][CODEWORD_LEN];
@@ -64,8 +65,8 @@ void find_max_val(float matrix[][CODEWORD_LEN], long long col,
 int chnl_rel_seq_order()
 {
 	long long i = 0, j = 0;
-	float tmp = 0, max_val = 0, scd_val = 0;
-	long long max_idx = 0, scd_idx = 0;
+	float tmp = 0, max_val = 0, scd_val = 0, thr_val = 0;
+	long long max_idx = 0, scd_idx = 0, thr_idx;
 	float chnl_rel[CODEWORD_LEN];
 
 	memset(chnl_rel_order, 0, sizeof(float) * CODEWORD_LEN);
@@ -79,6 +80,7 @@ int chnl_rel_seq_order()
 	{
 		max_val = 0;
 		scd_val = 0;
+		thr_val = 0;
 	
 		for(j = 0; j < (CODEWORD_LEN + 1); j++)
 		{
@@ -100,6 +102,17 @@ int chnl_rel_seq_order()
 			}
 
 			chnl_rel_scd_id[i] = scd_idx;
+		}
+		for(j = 0; j < (CODEWORD_LEN + 1); j++)
+		{
+			if((thr_val < chnl_rel_matrix[j][i])
+				&& (scd_val > chnl_rel_matrix[j][i]))
+			{
+				thr_val = chnl_rel_matrix[j][i];
+				thr_idx = j;
+			}
+
+			chnl_rel_thr_id[i] = thr_idx;
 		}
 
 		if(0 == scd_val)
@@ -126,6 +139,15 @@ int chnl_rel_seq_order()
 					 chnl_rel_order[i],
 		             chnl_rel_order_idx[i]);
 	}
+
+#if 0
+	float les_rel_sum = 0;
+	for(i = 0; i < 2; i++)
+	{
+		les_rel_sum = les_rel_sum + chnl_rel_order[i];
+	}
+	DEBUG_SYS("les_rel_sum: %f\n", les_rel_sum);
+#endif
 
 	return 0;
 }
@@ -164,6 +186,57 @@ int chnl_rel_cal(float **input_seq,
 
 	n0 = 1 / ((float)MESSAGE_LEN / (float)CODEWORD_LEN) / (pow(10, eb2n0 / 10) / 2);
 
+#if 1
+	long long seq_idx = 0;
+	float base_symbol = 0.0;
+	float d_sum = 0;
+	for(i = 0; i < CODEWORD_LEN; i++)
+	{
+		d_sum = 0;
+
+		for(j = 0; j < GF_FIELD; j++)
+		{
+			d0 = 0;
+			d1 = 0;
+
+			for(k = 0; k < GF_Q; k++)
+			{
+				seq_idx = i * GF_Q + k;
+				base_symbol = (float)((power_polynomial_table[j][1] >> k) & 0x1);
+				base_symbol = 1 - 2 * base_symbol;
+#if 0
+				d0 = d0 + (input_seq[seq_idx][0] - base_symbol) * (input_seq[seq_idx][0] - base_symbol)
+					    + (input_seq[seq_idx][1] - (0.0)) * (input_seq[seq_idx][1] - (0.0));
+#else				
+				d0 = (input_seq[seq_idx][0] - base_symbol) * (input_seq[seq_idx][0] - base_symbol)
+					  + (input_seq[seq_idx][1] - (0.0)) * (input_seq[seq_idx][1] - (0.0));
+				if(d0 >= d1)
+				{
+					d1 = d0;
+				}
+#endif
+#if 0
+				DEBUG_INFO("d0_cal %ld %ld %ld | %ld %f | %f %f | %f\n",
+				           i,
+				           j,
+				           k,
+				           seq_idx,
+				           base_symbol,
+				           input_seq[seq_idx][0],
+				           input_seq[seq_idx][1],
+				           d0);
+#endif
+			}
+			
+			if(d_sum < d1)
+			{
+				d_sum = d1;
+			}
+		}
+		DEBUG_INFO("d0: %ld | %f %f| %f\n", i, d0, d1, d_sum);
+	}
+#endif
+
 	for(i = 0; i < input_len; i++)
 	{
 		d0 = (input_seq[i][0] - (1.0)) * (input_seq[i][0] - (1.0))
@@ -172,8 +245,8 @@ int chnl_rel_cal(float **input_seq,
 				+ (input_seq[i][1] - (0.0)) * (input_seq[i][1] - (0.0));
 
 #if 1/*for float precision problem*/
-		d0 = d0 / 1e4;
-		d1 = d1 / 1e4;
+		d0 = d0 / 1e2;
+		d1 = d1 / 1e2;
 #endif
 
 		/*for BPSK*/
@@ -203,7 +276,11 @@ int chnl_rel_cal(float **input_seq,
 	{
 		for(j = 0; j < CODEWORD_LEN; j++)
 		{
+#if 1
 			chnl_rel_matrix[i][j] = 1;
+#else
+			chnl_rel_matrix[i][j] = 100;
+#endif
 
 			for(k = 0; k < GF_Q; k++)
 			{
@@ -216,8 +293,16 @@ int chnl_rel_cal(float **input_seq,
 		        		   tmp_bit,
 		        		   chnl_rel_matrix[i][j],
 		        		   map[j * GF_Q + k][tmp_bit]);
+#if 1
 				chnl_rel_matrix[i][j] = chnl_rel_matrix[i][j]
-									   * map[j * GF_Q + k][tmp_bit];
+									   * map[j * GF_Q + k][tmp_bit];					   
+#else
+				d_sum = map[j * GF_Q + k][tmp_bit];
+				if(d_sum < chnl_rel_matrix[i][j])
+				{
+					chnl_rel_matrix[i][j] = d_sum;
+				}
+#endif									   
 			}
 		}
 	}
@@ -279,21 +364,21 @@ int chnl_rel_cal(float **input_seq,
             chnl_rel_matrix[j][i] = 0;
         }
     }
-    chnl_rel_matrix[4][0] = 1;
-    chnl_rel_matrix[6][2] = 1;
+    chnl_rel_matrix[3][5] = 1;
+    chnl_rel_matrix[5][1] = 1;
     chnl_rel_matrix[0][3] = 1;
 
-	chnl_rel_matrix[5][4] = 0.9;
-	chnl_rel_matrix[6][4] = 0.1;
+	chnl_rel_matrix[1][6] = 0.9;
+	chnl_rel_matrix[7][6] = 0.1;
 
-	chnl_rel_matrix[2][5] = 0.8;
-	chnl_rel_matrix[5][5] = 0.2;
+	chnl_rel_matrix[3][4] = 0.8;
+	chnl_rel_matrix[5][4] = 0.2;
 
-	chnl_rel_matrix[4][6] = 0.7;
-	chnl_rel_matrix[6][6] = 0.3;
+	chnl_rel_matrix[7][2] = 0.7;
+	chnl_rel_matrix[6][2] = 0.3;
 
-	chnl_rel_matrix[1][1] = 0.6;
-	chnl_rel_matrix[4][1] = 0.4;
+	chnl_rel_matrix[3][0] = 0.6;
+	chnl_rel_matrix[7][0] = 0.4;
 #endif
 
 	chnl_rel_seq_order();
@@ -1852,7 +1937,7 @@ int re_encoding()
 					break;
 				}
 			}
-#if 1//there may be some errs
+#if 0//there may be some errs
 			if(0 == find_flag)
 			{
 				for(k = 0; k < (CODEWORD_LEN - YITA); k++)

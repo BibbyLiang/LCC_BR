@@ -9,14 +9,14 @@
 
 #define TEST_MODE		 0
 
-#define CFG_BR			 1
+#define CFG_BR			 0
 #define BR_SIMPLE_G		 1
 #define CFG_BR_PROG		 1
 #define CFG_T_WAVR_OPT	 1
 
-#define EARLY_TERMINATION		1
+#define EARLY_TERMINATION		0
 #define EARLY_TERMINATION_NUM	100
-#define OUTPUT_LOG				1
+#define OUTPUT_LOG				0
 #define DEBUG_LOG				0
 
 #define RELEX_ORDER				1
@@ -36,6 +36,8 @@
 #endif
 #define CFG_FAST_SKIP_TST_VCT	0
 
+#define CFG_PHI_FAST_SKIP		0
+
 #define CFG_PARTIALLY_PARALLEL	1
 #define PARALLEL_BATCH_NUM		1//BATCH_NUM * BATCH_SIZE = TOTAL_NUM
 #define CFG_PARALLEL_FAST_SKIP	0
@@ -45,13 +47,17 @@
 
 #define CFG_Q0_FAST_SKIP		1//44
 #define CFG_PRG_DECODING		1
-#define CFG_IMD_STORE			1
+#define CFG_IMD_STORE			0
+#define CFG_Y_ROOTS_SKIP		0
 
-#define CFG_ADAPTIVE_PARALLEL	1
+#define CFG_ADAPTIVE_PARALLEL	0
 #define CFG_ADAPTIVE_SIZE		32
 #define CFG_CHNL_REL_THRD		50
+#define CFG_ADAPTIVE_SIZE_TEST  0
 
-#define CFG_RE_ARRANGE_TST_VCT	1//not finish now, need to be checked and move to adaptive mode
+#define CFG_NEW_TST_VCT			0
+
+#define CFG_RE_ARRANGE_TST_VCT	0//not finish now, need to be checked and move to adaptive mode
 
 #define BF_INTERPOLATION		0
 
@@ -88,5 +94,6 @@
 /*there may be some problems. and it should be used with BF_INTERPOLATION*/
 #define TERM_SIZE_DBG		1//33
 #define FAST_RR_M1_DBG		1
+#define MS_BR_DBG			1
 
 #endif

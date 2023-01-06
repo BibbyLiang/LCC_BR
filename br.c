@@ -36,6 +36,12 @@ unsigned char *tst_vct_cmm_trans;
 
 unsigned char **gamma_poly;
 
+long long g_time_cnt = 0;
+
+#if (1 == CFG_NEW_TST_VCT)
+unsigned char **new_tst_vct_trans;
+#endif
+
 int t_poly_construct(unsigned char locator_j, unsigned char *L)
 {
 	DEBUG_NOTICE("%s: %x\n", __func__, locator_j);
@@ -345,6 +351,7 @@ int a_matrix_gen()
 		for(j = 0; j < B_MATRIX_SIZE; j++)
 		{
 			b_matrix[i][j][0] = 0xFF;//x^(-1)
+#if (0 == MS_BR_DBG)			
 			for(k = 0; k < (CODEWORD_LEN + 1); k++)
 			{
 				if((0 == i)
@@ -376,7 +383,34 @@ int a_matrix_gen()
 				{
 					b_matrix[i][j][k + 1] = 0xFF;
 				}
+			}	
+#else
+			for(k = 0; k < (CODEWORD_LEN - 0); k++)
+			{
+				b_matrix[i][j][0] = 0xFF;
+				b_matrix[i][j][1] = 0xFF;
+				if((0 == i)
+					&& (0 == j))
+				{
+					b_matrix[i][j][k + 2] = g_poly[k];
+				}
+				else if((1 == i)
+						&& (0 == j))
+				{
+					b_matrix[i][j][k + 2] = r_poly[k];
+				}
+				else if((1 == i)
+						&& (1 == j))
+				{
+					memset(b_matrix[i][j], 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 2));
+					b_matrix[i][j][1] = 0;//x^(0)
+				}
+				else
+				{
+					b_matrix[i][j][k + 2] = 0xFF;
+				}
 			}
+#endif
 		}
 	}
 
@@ -636,6 +670,7 @@ int b_matrix_gen_rev()
 	{
 		for(j = 0; j < B_MATRIX_SIZE; j++)
 		{
+#if (0 == MS_BR_DBG)		
 			for(k = (CODEWORD_LEN + 1); k >= 0; k--)
 			{
 				if(((0 == i)
@@ -662,7 +697,33 @@ int b_matrix_gen_rev()
 				{
 					a_matrix[i][j][k] = b_matrix[i][j][k];
 				}
-			}
+			}	
+#else
+			for(k = 0; k < (CODEWORD_LEN + 2); k++)
+			{
+				if((CODEWORD_LEN + 1) == k)
+				{
+					a_matrix[i][j][k] = 0xFF;
+					continue;
+				}
+
+				if(0 == j)
+				{
+					if(0xFF != b_matrix[i][j][k + 1])
+					{
+						a_matrix[i][j][k] = b_matrix[i][j][k + 1];
+					}
+					else
+					{
+						a_matrix[i][j][k] = 0xFF;
+					}
+				}
+				else
+				{
+					a_matrix[i][j][k] = b_matrix[i][j][k];
+				}
+			}	
+#endif
 		}
 	}
 	
@@ -679,12 +740,12 @@ int b_matrix_gen_rev()
 					if((k - 1) > max_dx)
 					{
 						max_dx = (k - 1);
-						DEBUG_INFO("max_dx: %ld\n", max_dx);
+						//DEBUG_INFO("max_dx: %ld\n", max_dx);
 					}
 					if(j > max_dy)
 					{
 						max_dy = j;
-						DEBUG_INFO("max_dy: %ld\n", max_dy);
+						//DEBUG_INFO("max_dy: %ld\n", max_dy);
 					}
 				}
 			}
@@ -783,6 +844,52 @@ int tst_vct_trans_exit()
 	
 	return 0;
 }
+
+#if (1 == CFG_NEW_TST_VCT)
+int new_tst_vct_trans_init()
+{
+	long long i = 0, j = 0;
+
+	new_tst_vct_trans = (unsigned char**)malloc(sizeof(unsigned char*) * pow_val);
+	for(i = 0; i < pow_val; i++)
+	{
+		new_tst_vct_trans[i] = (unsigned char*)malloc(sizeof(unsigned char) * CODEWORD_LEN);
+  	}
+  	for(i = 0; i < pow_val; i++)
+	{		
+		for(j = 0; j < CODEWORD_LEN; j++)
+		{
+			
+			if(0xFF != new_tst_vct[i][j])
+			{
+				new_tst_vct_trans[i][j] = beta_matrix[new_tst_vct[i][j] + 1][j];
+			}
+			else
+			{
+				new_tst_vct_trans[i][j] = beta_matrix[0][j];
+			}
+			DEBUG_NOTICE("new_tst_vct_trans: %ld %ld | %x %x\n", i, j, new_tst_vct[i][j], new_tst_vct_trans[i][j]);
+		}
+  	}
+  	
+  	return 0;
+}
+
+int new_tst_vct_trans_exit()
+{
+	long long i = 0;
+
+	for(i = 0; i < pow_val; i++)
+	{
+		free(new_tst_vct_trans[i]);
+		new_tst_vct_trans[i] = NULL;
+	}
+	free(new_tst_vct_trans);
+	new_tst_vct_trans = NULL;
+
+	return 0;
+}
+#endif
 
 unsigned char tmp_1[CODEWORD_LEN + 1], tmp_2[CODEWORD_LEN + 1];
 
@@ -1096,8 +1203,9 @@ int g_r_poly_div_v()
 	{
 		DEBUG_INFO("g_poly: %ld | %x\n", i, g_poly[i]);
 	}
-#else	
-	g_wave_poly_gen();
+#else
+	//g_wave_poly_gen();
+	memcpy(g_poly, t_wave_cmm, sizeof(unsigned char) * (CODEWORD_LEN + 1));
 #endif	
 #if 0	
 	memset(quotien, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN + 1));
@@ -1308,6 +1416,7 @@ int a_matrix_tv_gen(long long tv_idx)
 			b_matrix[i][j][0] = 0xFF;//x^(-1)
 			for(k = 0; k < (CODEWORD_LEN + 1); k++)
 			{
+#if (0 == MS_BR_DBG)			
 				if(0 == j)
 				{
 					b_matrix[i][j][k] = a_matrix[i][j][k];
@@ -1337,6 +1446,26 @@ int a_matrix_tv_gen(long long tv_idx)
 				{
 					b_matrix[i][j][k] = 0xFF;
 				}
+#else
+				if(1 == j)
+				{
+					b_matrix[i][j][k] = a_matrix[i][j][k];
+				}
+				else if(0 == j)
+				{
+					if(CODEWORD_LEN == k)
+					{
+						b_matrix[i][j][k] = 0xFF;
+						continue;
+					}
+					b_matrix[i][j][k + 1] = a_matrix[i][j][k];
+				}
+				else
+				{
+					b_matrix[i][j][k] = 0xFF;
+				}
+				b_matrix[i][j][CODEWORD_LEN + 1] = a_matrix[i][j][CODEWORD_LEN];
+#endif
 			}
 		}
 	}
@@ -1460,6 +1589,7 @@ int gamma_diff_poly_gen(long long tv_idx)
 	long long i = 0;
 	unsigned char diff_vct[CODEWORD_LEN];
 	memset(diff_vct, 0xFF, sizeof(unsigned char) * CODEWORD_LEN);
+	
 	for(i = 0; i < CODEWORD_LEN; i++)
 	{
 		if(0 == tv_idx)
@@ -1484,8 +1614,8 @@ int gamma_diff_poly_gen(long long tv_idx)
 	}
 
 	//tv_idx_prev = tv_idx;
-	//tv_idx_prev = 0;
-	tv_idx_prev = tv_round_clock_base;
+	tv_idx_prev = 0;
+	//tv_idx_prev = tv_round_clock_base;
 
 	return 0;
 }
@@ -1519,7 +1649,7 @@ int br_uncmm_interpolation(long long tv_idx)
 {
 	DEBUG_IMPOTANT("%s: %ld\n", __func__, tv_idx);
 	long long time_cnt = 0;
-
+	//start_t = clock();
 #if (0 == CFG_BR_PROG)
 	gamma_poly_gen(tv_idx);
 #else
@@ -1529,8 +1659,8 @@ int br_uncmm_interpolation(long long tv_idx)
 	a_matrix_tv_gen(tv_idx);
 
 #if 1//(1 == CFG_BR_PROG)	
-	//if(0 == tv_idx)
-	if(1 == tv_round_clock_base_prev)
+	if(0 == tv_idx)
+	//if(1 == tv_round_clock_base_prev)
 	{
 		base_cmm_poly_matrix_trans();
 	}
@@ -1540,20 +1670,54 @@ int br_uncmm_interpolation(long long tv_idx)
 	{
 		ms_trans(B_MATRIX_SIZE, B_MATRIX_SIZE);
 		time_cnt++;
-		
 		if(10000 < time_cnt)
 		{
 			DEBUG_SYS("MS timeout: %ld\n", time_cnt);
 			break;
 		}
 	}
+	g_time_cnt = time_cnt;
+#if 0
+	if(0 != (g_time_cnt % 2))
+	{
+		DEBUG_SYS("MS skip: %ld\n", time_cnt);
+		return 0;
+	}
+#endif	
+	DEBUG_INFO("MS cnt: %ld\n", time_cnt);
+#if (1 == CFG_ADAPTIVE_SIZE_TEST)	
+	if(0 == tv_idx)
+	{
+		if(26 >= time_cnt)
+		{
+			adapive_size_br = 1;
+		}
+#if 0
+		else if(27 >= time_cnt)
+		{
+			adapive_size_br = 2;
+		}
+#endif		
+		else
+		{
+			adapive_size_br = CFG_ADAPTIVE_SIZE;
+		}
+
+		free(adaptive_batch_num);
+		adaptive_batch_num = NULL;
+		adaptive_parallel_init();
+	}
+#endif	
 
 	b_matrix_gen_rev();
-	
+
 	br_poly_trans(tv_idx);
-
+	
+	//stop_t = clock();
+	//runtime_t = runtime_t + (stop_t - start_t) / 1000.0000;
+	//gf_count_switch(0);
 	uncommon_fast_msg_get(tv_idx);
-
+	//gf_count_switch(1);
 #if 0//(1 == CFG_BR_PROG)	
 	base_cmm_poly_matrix_trans();
 #endif

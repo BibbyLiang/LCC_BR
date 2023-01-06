@@ -73,7 +73,7 @@ void main()
 	float runtime;
 
 	/*input simulation parameters*/
-	float eb2n0_start = 8, eb2n0_stop = 8, eb2n0_step = 1, eb2n0 = 8;
+	float eb2n0_start = 2, eb2n0_stop = 2, eb2n0_step = 1, eb2n0 = 2;
 	long long iter_cnt = 1, monitor_cnt = 1;
 #if (0 == TEST_MODE)
 #if 1
@@ -138,6 +138,11 @@ void main()
 #endif
 		memset(latency_per_round_add, 0, sizeof(long long) * batch_size);
 		memset(latency_per_round_mul, 0, sizeof(long long) * batch_size);
+		
+		runtime_t = 0;
+		
+		satisfy_cnt = 0;
+		new_tst_vct_ok_cnt = 0;
 
 		/*for every frame*/
 		for(iter = 0; iter < iter_cnt; iter++)
@@ -173,8 +178,8 @@ void main()
 #if (1 == TEST_MODE)
 			/*generate messages for test mode*/
 			message_polynomial[0] = 0x4;
-			message_polynomial[1] = 0x4;
-			message_polynomial[2] = 0x5;
+			message_polynomial[1] = 0x2;
+			message_polynomial[2] = 0x6;
 			//message_polynomial[3] = 0x3;
 			//message_polynomial[4] = 0x4;
 			//message_polynomial[5] = 0x4;
@@ -233,13 +238,13 @@ void main()
 			//received_polynomial[4] = gf_add(encoded_polynomial[4], 0x2);
 			//received_polynomial[5] = gf_add(encoded_polynomial[5], 0x0);
 			//received_polynomial[9] = gf_add(encoded_polynomial[9], 0x2);
-			received_polynomial[0] = 0x3;
-			received_polynomial[1] = 0x0;
-			received_polynomial[2] = 0x5;
+			received_polynomial[0] = 0x2;
+			received_polynomial[1] = 0x4;
+			received_polynomial[2] = 0x6;
 			received_polynomial[3] = 0xFF;
-			received_polynomial[4] = 0x4;
-			received_polynomial[5] = 0x1;
-			received_polynomial[6] = 0x3;
+			received_polynomial[4] = 0x2;
+			received_polynomial[5] = 0x2;
+			received_polynomial[6] = 0x0;
 #endif
 #endif
 
@@ -278,11 +283,18 @@ void main()
 
 			/*nultiplicity assignment*/
 			mul_assign();
+			
 			gf_count_switch(1);
+			start_t = clock();
+			
 			/*re-encoding transform*/
 			re_encoding();
+			//gf_count_switch(1);
 			/*GS decoding*/
 			as_decoding();
+
+			stop_t = clock();
+			runtime_t = runtime_t + (stop_t - start_t) / 1000.0000;
 			gf_count_switch(0);
 #if (1 == GF_CAL_COUNT)
 			/*count gf field calculating complexity*/
@@ -303,6 +315,12 @@ void main()
 					{
 						frame_err_flag = 1;
 						frame_err = frame_err + 1;
+						DEBUG_INFO("err\n");
+						if((0 != g_decoded_cnt)
+							&& (pow_val != g_decoded_cnt))
+						{
+							DEBUG_INFO("g_decoded_cnt: %ld\n", g_decoded_cnt);
+						}
 					}
 					for(j = 0; j < GF_Q; j++)
 					{
@@ -405,8 +423,8 @@ void main()
 								  received_polynomial[i],
 								  tst_vct_debug[i],
 								  chnl_rel_order_idx[i],
-								  chnl_rel_max_id[i],
-								  chnl_rel_scd_id[i]);
+								  chnl_rel_max_id[chnl_rel_order_idx[i]],
+								  chnl_rel_scd_id[chnl_rel_order_idx[i]]);
 				}		  
 #if (1 == DEBUG_LOG)
 				printf("Radius Err. for Decoding 2: %d %d\n",
@@ -535,6 +553,7 @@ void main()
 				
 				DEBUG_SYS("---------------------\n");
 				DEBUG_SYS("Time: %fs\n", runtime);
+				DEBUG_SYS("Time_Sen: %fs\n", runtime_t);
 				DEBUG_SYS("Eb/N0: %f dB\n", eb2n0);
 				DEBUG_SYS("Frame: %ld\n", iter + 1);
 				DEBUG_SYS("Uncoded Frame Error: %ld\n", uncoded_frame_err);
@@ -604,12 +623,16 @@ void main()
 					avg_round = avg_round + (float)(round_hist[i] * (i));
 				}
 				DEBUG_SYS("avg_round: %f\n", avg_round / (float)(iter + 1));
+#if (1 == CFG_ADAPTIVE_SIZE_TEST)				
+				DEBUG_SYS("adapive_size_br: %ld\n", adapive_size_br);
+#endif				
 #endif		
 
 #if (1 == OUTPUT_LOG)
 				frc = fopen(log_name, "a+");
 				fprintf(frc, "---------------------\n");
 				fprintf(frc, "Time: %fs\n", runtime);
+				fprintf(frc, "Time_sen: %fs\n", runtime_t);
 				fprintf(frc, "Eb/N0: %f dB\n", eb2n0);
 				fprintf(frc, "Frame: %ld\n", iter + 1);
 				fprintf(frc, "Uncoded Frame Error: %ld\n", uncoded_frame_err);
@@ -699,6 +722,7 @@ void main()
 		/*output final results*/
 		DEBUG_SYS("*********************************\n");
 		DEBUG_SYS("Time: %fs\n", runtime);
+		DEBUG_SYS("Time_Sen: %fs\n", runtime_t);
 		DEBUG_SYS("Eb/N0: %f dB\n", eb2n0);
 		DEBUG_SYS("Frame: %ld\n", iter_cnt + 1);
 		DEBUG_SYS("Uncoded Frame Error: %ld\n", uncoded_frame_err);
@@ -786,6 +810,9 @@ void main()
 		}
 	
 		DEBUG_SYS("avg_round: %f\n", avg_round / (float)(iter + 1));
+		
+		DEBUG_SYS("satisfy_cnt: %ld\n", satisfy_cnt);
+		DEBUG_SYS("new_tst_vct_ok_cnt: %ld\n", new_tst_vct_ok_cnt);
 
 		DEBUG_SYS("Uncoded Results: %.10lf %.10lf %.10lf\n", 
 			    (double)uncoded_frame_err / (double)(iter + 1),
@@ -801,6 +828,7 @@ void main()
 		frc = fopen(log_name, "a+");
 		fprintf(frc, "*********************************\n");
 		fprintf(frc, "Time: %fs\n", runtime);
+		fprintf(frc, "Time_sen: %fs\n", runtime_t);
 		fprintf(frc, "Eb/N0: %f dB\n", eb2n0);
 		fprintf(frc, "Frame: %ld\n", iter_cnt + 1);
 		fprintf(frc, "Uncoded Frame Error: %ld\n", uncoded_frame_err);
@@ -841,6 +869,10 @@ void main()
 			fprintf(frc, "round_hist: %ld %ld\n", i, round_hist[i]);
 		}
 		fprintf(frc, "avg_round: %f\n", avg_round / (float)(iter + 1));
+
+		fprintf(frc, "satisfy_cnt: %ld\n", satisfy_cnt);
+		fprintf(frc, "new_tst_vct_ok_cnt: %ld\n", new_tst_vct_ok_cnt);
+
 		fprintf(frc, "Uncoded Results: %.10lf %.10lf %.10lf\n", 
 			    (double)uncoded_frame_err / (double)(iter + 1),
 			    (double)uncoded_symbol_err / (double)(iter + 1) / CODEWORD_LEN * BITS_PER_SYMBOL_BPSK,

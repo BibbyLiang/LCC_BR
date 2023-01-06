@@ -62,7 +62,7 @@ extern unsigned char *tst_vct_cmm;
 extern unsigned char **tst_vct;
 extern unsigned char tst_vct_debug[CODEWORD_LEN];
 
-#if (1 == CFG_IMD_STORE)
+#if 1//(1 == CFG_IMD_STORE)
 extern long long intp_cnt;
 #endif
 
@@ -77,6 +77,27 @@ extern long long term_size_p;
 
 extern long long tv_round_clock_base;
 extern long long tv_round_clock_base_prev;
+
+#if (1 == CFG_ADAPTIVE_PARALLEL)
+extern long long *adaptive_batch_num;
+#endif
+
+#if (1 == CFG_ADAPTIVE_SIZE_TEST)
+extern long long adapive_size_br;
+#endif
+
+extern long long g_decoded_cnt;
+
+#if (1 == CFG_NEW_TST_VCT)
+extern unsigned char **new_tst_vct;
+extern long long *new_tst_vct_seq;
+#endif
+
+extern long long satisfy_cnt;
+extern long long new_tst_vct_ok_cnt;
+
+extern clock_t start_t, stop_t;
+extern float runtime_t;
 
 extern int as_decoding();
 extern int g_term_malloc();
@@ -117,6 +138,10 @@ extern int MLcriterion(unsigned char est_cwd[]);
 #if (1 == CFG_IMD_STORE)
 int store_q_c_save(long long layer_idx, long long node_idx, long long tst_vct_idx);
 int store_q_c_load(long long layer_idx, long long node_idx, long long tst_vct_idx);
+#endif
+
+#if (1 == CFG_ADAPTIVE_PARALLEL)
+extern int adaptive_parallel_init();
 #endif
 
 #endif
